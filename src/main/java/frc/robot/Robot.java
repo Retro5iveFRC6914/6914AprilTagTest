@@ -207,7 +207,7 @@ arm.stopMotor();
      * as positive, arm in is negative.
      */
 
-    arm.setInverted(false);
+    arm.setInverted(true);
     intake.setInverted(false);
     intake.setIdleMode(IdleMode.kBrake);
     arm.setNeutralMode(NeutralMode.Brake);
@@ -328,7 +328,7 @@ arm.stopMotor();
 
     if (timeElapsed < ARM_EXTEND_TIME_S) {
       //arm extends
-      setArmMotor(-ARM_OUTPUT_POWER);
+      setArmMotor(-ARM_OUTPUT_POWER - .05);
       setIntakeMotor(0.0, INTAKE_CURRENT_LIMIT_A);
       setDriveMotors(0.0, 0.0);
     } else if (timeElapsed < ARM_EXTEND_TIME_S + AUTO_THROW_TIME_S) {
@@ -341,7 +341,7 @@ arm.stopMotor();
       setArmMotor(ARM_OUTPUT_POWER);
       setIntakeMotor(0.0, INTAKE_CURRENT_LIMIT_A);
       setDriveMotors(0.0, 0.0);
-    } else if (timeElapsed < ARM_EXTEND_TIME_S + AUTO_THROW_TIME_S + ARM_EXTEND_TIME_S + AUTO_DRIVE_TIME) {
+    } else if (timeElapsed < ARM_EXTEND_TIME_S + AUTO_THROW_TIME_S + ARM_EXTEND_TIME_S + AUTO_DRIVE_TIME-1) {
       //drives backwards
       setArmMotor(0.0);
       setIntakeMotor(0.0, INTAKE_CURRENT_LIMIT_A);
