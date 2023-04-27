@@ -22,8 +22,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.cameraserver.CameraServer;
-
-
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
 
 public class Robot extends TimedRobot {
   /*
@@ -65,7 +66,7 @@ public class Robot extends TimedRobot {
    * The intake is a NEO 550 on Everybud.
    */
   WPI_TalonFX arm = new WPI_TalonFX(1);
-  CANSparkMax intake = new CANSparkMax(11, MotorType.kBrushless);
+  CANSparkMax intake = new CANSparkMax(30, MotorType.kBrushless);
 
 
   /* 
@@ -275,6 +276,21 @@ arm.stopMotor();
   @Override
   public void robotPeriodic() {
     SmartDashboard.putNumber("Time (seconds)", Timer.getFPGATimestamp());
+    //limelight required code
+    NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
+NetworkTableEntry tx = table.getEntry("tx");
+NetworkTableEntry ty = table.getEntry("ty");
+NetworkTableEntry ta = table.getEntry("ta");
+
+//read values periodically
+double x = tx.getDouble(0.0);
+double y = ty.getDouble(0.0);
+double area = ta.getDouble(0.0);
+
+//post to smart dashboard periodically
+SmartDashboard.putNumber("LimelightX", x);
+SmartDashboard.putNumber("LimelightY", y);
+SmartDashboard.putNumber("LimelightArea", area);
   }
 
   double autonomousStartTime;
@@ -327,7 +343,7 @@ arm.stopMotor();
    double timeElapsed = Timer.getFPGATimestamp() - autonomousStartTime;
 
     if (timeElapsed < ARM_EXTEND_TIME_S) {
-      //arm extends
+      //arm extends, (Henry: Added .05 power to arm extending)
       setArmMotor(-ARM_OUTPUT_POWER - .05);
       setIntakeMotor(0.0, INTAKE_CURRENT_LIMIT_A);
       setDriveMotors(0.0, 0.0);
@@ -495,7 +511,6 @@ arm.stopMotor();
       driveRFTalon.setNeutralMode(NeutralMode.Coast);
       driveRRTalon.setNeutralMode(NeutralMode.Coast);
     }
-
 
 
     /*
