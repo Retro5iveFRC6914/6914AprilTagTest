@@ -7,16 +7,19 @@ package frc.robot;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
-import com.ctre.phoenix.sensors.Pigeon2;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
-import com.ctre.phoenix.sensors.CANCoder;
 
+import edu.wpi.first.math.estimator.DifferentialDrivePoseEstimator;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
+import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
@@ -25,6 +28,8 @@ import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.math.geometry.Rotation2d;
+import libraries.apriltags.LimelightHelpers;
 
 public class Robot extends TimedRobot {
   /*
@@ -37,6 +42,15 @@ public class Robot extends TimedRobot {
   private static final String kMobilityOnlyAuto = "mobility only";
   private String m_autoSelected;
   private final SendableChooser<String> m_autoChooser = new SendableChooser<>();
+
+  // Limelight pose stuff
+  Field2d field = new Field2d();
+  DifferentialDriveKinematics driveKinematics = new DifferentialDriveKinematics(Constants.k_trackWidthMeters);
+  // Starting position goes here but will auto adjust off apriltags
+  DifferentialDriveOdometry driveOdometry = new DifferentialDriveOdometry(new Rotation2d(0),
+          0, 0,new Pose2d(0, 0, new Rotation2d(0)));
+  DifferentialDrivePoseEstimator poseEstimator = new DifferentialDrivePoseEstimator(
+    driveKinematics, driveOdometry.getPoseMeters().getRotation(), 0.0, 0.0, new Pose2d(0, 0, new Rotation2d(0)));
 
   /*
    * Drive motor controller instances.
@@ -275,6 +289,10 @@ arm.stopMotor();
    */
   @Override
   public void robotPeriodic() {
+    // Displays the robot on the field
+    updatePoseEstimator();
+    SmartDashboard.putData(field);
+
     SmartDashboard.putNumber("Time (seconds)", Timer.getFPGATimestamp());
     //limelight required code
     NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
@@ -520,4 +538,29 @@ SmartDashboard.putNumber("LimelightArea", area);
 
   }
 
+  private void updatePoseEstimator() {
+    poseEstimator.update(
+            driveOdometry.getPoseMeters().getRotation(),
+            getLeftEncoderDistanceMeters(),
+            getRightEncoderDistanceMeters()
+    );
+
+    Rotation2d poseHeading = poseEstimator.getEstimatedPosition().getRotation();
+
+    Pose2d estimatedPose = LimelightHelpers.getBotPose2d(Constants.k_limelightName);
+
+    poseEstimator.addVisionMeasurement(
+            estimatedPose,
+            LimelightHelpers.getLatency_Capture(Constants.k_limelightName)
+    );
+
+    field.setRobotPose(poseEstimator.getEstimatedPosition());
+  }
+
+  private double getLeftEncoderDistanceMeters() {
+    return driveLFTalon.getSelectedSensorPosition() * Constants.k_DriveEncoderDistancePerPulse;
+  }
+  private double getRightEncoderDistanceMeters() {
+    return driveRFTalon.getSelectedSensorPosition() * Constants.k_DriveEncoderDistancePerPulse;
+  }
 }
